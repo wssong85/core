@@ -2,6 +2,7 @@ package netty;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -18,6 +19,7 @@ import io.netty.handler.codec.rtsp.RtspEncoder;
 import io.netty.handler.codec.rtsp.RtspHeaderNames;
 import io.netty.handler.codec.rtsp.RtspMethods;
 import io.netty.handler.codec.rtsp.RtspVersions;
+import java.util.Objects;
 import java.util.Scanner;
 
 /**
@@ -27,25 +29,36 @@ import java.util.Scanner;
 public class RtspClient {
 
   public static class ClientHandler extends SimpleChannelInboundHandler<DefaultHttpResponse> {
+
+    private String msg;
+
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
       ctx.flush();
     }
     protected void channelRead0(ChannelHandlerContext ctx, DefaultHttpResponse msg) throws Exception {
-      System.out.println(msg.toString());
+      setMsg(Objects.toString(msg, ""));
+      ctx.close().sync();
+    }
+
+    public String getMsg() {
+      return this.msg;
+    }
+
+    public void setMsg(String msg) {
+      this.msg = msg;
     }
   }
 
   public static void main(String[] args) throws InterruptedException {
 
     EventLoopGroup workerGroup = new NioEventLoopGroup();
-
-    final ClientHandler handler = new ClientHandler();
+    ClientHandler handler = new ClientHandler();
 
     Bootstrap b = new Bootstrap();
     b.group(workerGroup);
     b.channel(NioSocketChannel.class);
-    b.option(ChannelOption.SO_KEEPALIVE, true);
+    b.option(ChannelOption.AUTO_CLOSE, true);
     b.remoteAddress("wowzaec2demo.streamlock.net", 80);
     b.handler(new ChannelInitializer<SocketChannel>() {
       protected void initChannel(SocketChannel ch) {
@@ -63,19 +76,11 @@ public class RtspClient {
     request.headers().add(RtspHeaderNames.SESSION, "294");
 
     channel.writeAndFlush(request);
-
-    System.out.println(channel.read());
-
-    System.out.println(channel.isWritable());
-    System.out.println(channel.isActive());
-    request = new DefaultHttpRequest(RtspVersions.RTSP_1_0, RtspMethods.TEARDOWN, "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov");
-    request.headers().add(RtspHeaderNames.CSEQ, 2);
-    request.headers().add(RtspHeaderNames.SESSION, "294");
-
-    channel.writeAndFlush(request);
-    Scanner sc = new Scanner(System.in);
-    sc.nextLine();
     channel.closeFuture().sync();
 
+    //return message
+    System.out.println(handler.getMsg());
+
+    workerGroup.shutdownGracefully();
   }
 }
