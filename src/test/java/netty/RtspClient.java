@@ -50,7 +50,23 @@ public class RtspClient {
     }
   }
 
+//  curl -v -X DESCRIBE rtsp://wowzaec2demo.streamlock.net
+//  curl -v -X DESCRIBE rtsp://toveacademy.iptime.org:5558
+
+//  ffmpeg 큰따옴표로 묶어야함
+//  ffmpeg -y -i  rtsp://username:password@example.com  -vframes 1  -pix_fmt yuvj420p -vf select='eq(pict_type\,I)' -q:v 1 _test.jpg
+//  ffmpeg -y -i "rtsp://username:password@example.com" -vframes 1  -pix_fmt yuvj420p -vf select='eq(pict_type\,I)' -q:v 1 _test.jpg
+//  ffmpeg -maxrate 800k -bufsize 3000k -f dshow -i video="HD Pro Webcam C920" -f rtsp -rtsp_transport tcp rtsp://localhost:8554/visual
+
   public static void main(String[] args) throws InterruptedException {
+
+    String server = "wowzaec2demo.streamlock.net";
+    int port = 80;
+    String rtspUri = "rtsp://wowzaec2demo.streamlock.net:80/vod/mp4:BigBuckBunny_115k.mov";
+
+//    String server = "toveacademy.iptime.org";
+//    int port = 5558;
+//    String rtspUri = "rtsp://admin:12345678qq@toveacademy.iptime.org:5558/streaming/channels/0101";
 
     EventLoopGroup workerGroup = new NioEventLoopGroup();
     ClientHandler handler = new ClientHandler();
@@ -59,7 +75,7 @@ public class RtspClient {
     b.group(workerGroup);
     b.channel(NioSocketChannel.class);
     b.option(ChannelOption.AUTO_CLOSE, true);
-    b.remoteAddress("wowzaec2demo.streamlock.net", 80);
+    b.remoteAddress(server, port);
     b.handler(new ChannelInitializer<SocketChannel>() {
       protected void initChannel(SocketChannel ch) {
         ChannelPipeline p = ch.pipeline();
@@ -71,7 +87,7 @@ public class RtspClient {
 
     Channel channel = b.connect().sync().channel();
 
-    DefaultHttpRequest request = new DefaultHttpRequest(RtspVersions.RTSP_1_0, RtspMethods.GET_PARAMETER,"rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov");
+    DefaultHttpRequest request = new DefaultHttpRequest(RtspVersions.RTSP_1_0, RtspMethods.GET_PARAMETER, rtspUri);
     request.headers().add(RtspHeaderNames.CSEQ, 1);
     request.headers().add(RtspHeaderNames.SESSION, "294");
 
